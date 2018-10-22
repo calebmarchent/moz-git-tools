@@ -14,7 +14,7 @@ diffdiff
 '''
 
 from __future__ import print_function
-import sys
+import sys, re
 from cStringIO import StringIO
 
 def hg_patch_to_git_patch(hg_patch_file):
@@ -35,7 +35,7 @@ def hg_patch_to_git_patch(hg_patch_file):
 
         if line.startswith('# User '):
             author = line[len('# User '):]
-        if line.startswith('# Date '): 
+        if line.startswith('# Date '):
             date = line[len('# Date '):]
             epoch, utcoffset = date.split()
             # Mercurial's timezone offsets are negative and in seconds
@@ -54,7 +54,7 @@ def hg_patch_to_git_patch(hg_patch_file):
         line = hg_patch[i]
         if line.startswith('diff -'):
             break
-        commit_msg.append(hg_patch[i]) 
+        commit_msg.append(hg_patch[i])
 
     if len(commit_msg) == 1 and not commit_msg[0].strip():
         commit_msg[0] = hg_patch_file.name
@@ -66,7 +66,15 @@ def hg_patch_to_git_patch(hg_patch_file):
     while commit_msg and not commit_msg[-1].strip():
         del commit_msg[-1]
 
-    diff = hg_patch[i:]
+    diff = list()
+    keepfile = True
+    r = re.compile('a/fbcode/logdevice/(fb|public_tld|py)/')
+    r2 = re.compile('a/\S*TARGETS')
+    for line in hg_patch[i:]:
+        if line.startswith('diff -'):
+            keepfile = not ( r.search(line) or r2.search(line) )
+        if keepfile:
+            diff.append(line)
 
     if author:
         # XXX ensure this has the Foo <foo@bar.com> form.
